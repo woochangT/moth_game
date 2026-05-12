@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>후추나방 생존 게임</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --forest-bg: #c8b89a;
+  --forest-bark: #8B6914;
+  --volcano-bg: #2a2420;
+  --volcano-bark: #1a1210;
+  --color-BB: #1a1008;
+  --color-Bb: #5a3e28;
+  --color-bb: #E8E0D0;
+  --ui-bg: rgba(0,0,0,0.65);
+  --ui-text: #fff;
+  --accent: #e8c56d;
+}
+
+body {
+  font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif;
+  background: #111;
+  color: #fff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ========== SCREENS ========== */
+.screen {
+  display: none;
+  width: 100vw;
+  height: 100vh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.screen.active { display: flex; }
+
+/* ========== START SCREEN ========== */
+#startScreen {
+  background: radial-gradient(ellipse at 50% 30%, #2d4a1e, #0d1a08);
+  gap: 2rem;
+  padding: 2rem;
+}
+.game-title {
+  text-align: center;
+}
+.game-title h1 {
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  font-weight: 700;
+  color: #e8c56d;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+.game-title p {
+  font-size: 1rem;
+  color: rgba(255,255,255,0.7);
+  margin-top: 0.5rem;
+}
+.env-cards {
+  display: flex;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.env-card {
+  width: 160px;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 3px solid transparent;
+  transition: transform 0.2s, border-color 0.2s;
+  touch-action: manipulation;
+}
+.env-card:active { transform: scale(0.96); }
+.env-card.selected { border-color: #e8c56d; }
+.env-preview {
+  height: 110px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 8px;
+  position: relative;
+}
+.env-preview.forest { background: linear-gradient(180deg, #4a7c3f 0%, #c8b89a 60%); }
+.env-preview.volcano { background: linear-gradient(180deg, #1a1210 0%, #2a2420 60%); }
+.env-tree-preview {
+  width: 30px;
+  height: 70px;
+  border-radius: 4px 4px 0 0;
+  margin: 0 4px;
+}
+.forest .env-tree-preview { background: #8B6914; }
+.volcano .env-tree-preview { background: #1a1210; border: 1px solid #333; }
+.env-label {
+  background: rgba(0,0,0,0.8);
+  padding: 0.6rem;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.start-btn {
+  background: #e8c56d;
+  color: #1a1008;
+  border: none;
+  padding: 0.9rem 3rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border-radius: 50px;
+  cursor: pointer;
+  font-family: inherit;
+  touch-action: manipulation;
+  transition: transform 0.15s, background 0.15s;
+}
+.start-btn:active { transform: scale(0.96); }
+.start-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ========== GAME SCREEN ========== */
+#gameScreen {
+  position: relative;
+  overflow: hidden;
+}
+#gameCanvas {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+}
+.game-hud {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 1.2rem;
+  background: rgba(0,0,0,0.55);
+  z-index: 10;
+}
+.hud-item {
+  text-align: center;
+}
+.hud-label {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.hud-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #e8c56d;
+}
+.catch-indicator {
+  position: absolute;
+  bottom: 1.8rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.82);
+  padding: 0.85rem 2.2rem;
+  border-radius: 50px;
+  font-size: 1.15rem;
+  font-weight: 600;
+  z-index: 10;
+  white-space: nowrap;
+  border: 1.5px solid rgba(232,197,109,0.35);
+  letter-spacing: -0.2px;
+}
+.catch-indicator span { color: #e8c56d; font-weight: 800; font-size: 1.3rem; }
+
+/* ========== TRANSITION SCREEN ========== */
+#transitionScreen {
+  background: #0d1a08;
+  gap: 1.5rem;
+  padding: 2rem;
+}
+.transition-content {
+  text-align: center;
+  max-width: 380px;
+}
+.transition-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #e8c56d;
+  margin-bottom: 1rem;
+}
+.life-cycle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 1rem 0;
+}
+.life-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+.life-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+}
+.life-icon.eggs { background: rgba(232,197,109,0.15); animation: pulse 1s ease-in-out 0s infinite alternate; }
+.life-icon.death { background: rgba(200,80,60,0.15); animation: pulse 1s ease-in-out 0.3s infinite alternate; }
+.life-icon.birth { background: rgba(80,180,100,0.15); animation: pulse 1s ease-in-out 0.6s infinite alternate; }
+@keyframes pulse { from { transform: scale(0.9); opacity: 0.6; } to { transform: scale(1.1); opacity: 1; } }
+.life-arrow { font-size: 1.2rem; color: rgba(255,255,255,0.3); }
+.life-label { font-size: 0.7rem; color: rgba(255,255,255,0.5); }
+.transition-sub {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.5);
+  line-height: 1.6;
+}
+.progress-dots {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+.dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  transition: background 0.3s;
+}
+.dot.active { background: #e8c56d; }
+
+/* ========== RESULT SCREEN 1 ========== */
+#resultScreen1 {
+  background: #1a2010;
+  padding: 1rem;
+  gap: 0.8rem;
+  overflow-y: auto;
+}
+.result-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #e8c56d;
+  text-align: center;
+}
+.result-subtitle {
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.75);
+  text-align: center;
+}
+.capture-notice {
+  background: rgba(232,197,109,0.15);
+  border: 1.5px solid rgba(232,197,109,0.5);
+  border-radius: 10px;
+  padding: 0.5rem 1.2rem;
+  font-size: 0.85rem;
+  color: #e8c56d;
+  text-align: center;
+  font-weight: 600;
+}
+.generations-row {
+  display: flex;
+  gap: 0.6rem;
+  overflow-x: auto;
+  padding: 0.3rem;
+  width: 100%;
+  justify-content: center;
+}
+.gen-block {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+.gen-label {
+  font-size: 0.68rem;
+  color: rgba(255,255,255,0.8);
+  text-align: center;
+  font-weight: 600;
+}
+.gen-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  background: rgba(255,255,255,0.12);
+  padding: 5px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+.moth-cell {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.moth-cell.BB { background: #1a1008; border: 1.5px solid rgba(255,255,255,0.3); }
+.moth-cell.Bb { background: #5a3820; }
+.moth-cell.bb { background: #E8E0D0; border: 1px solid #bbb; }
+.stats-row {
+  display: flex;
+  gap: 0.8rem;
+  justify-content: center;
+}
+.stat-box {
+  background: rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 0.5rem 1rem;
+  text-align: center;
+}
+.stat-box .label { font-size: 0.65rem; color: rgba(255,255,255,0.4); }
+.stat-box .value { font-size: 1.1rem; font-weight: 700; color: #e8c56d; }
+.next-btn {
+  background: transparent;
+  color: #e8c56d;
+  border: 2px solid #e8c56d;
+  padding: 0.7rem 2.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 50px;
+  cursor: pointer;
+  font-family: inherit;
+  touch-action: manipulation;
+  transition: background 0.15s;
+}
+.next-btn:active { background: rgba(232,197,109,0.15); }
+
+/* ========== RESULT SCREEN 2 ========== */
+#resultScreen2 {
+  background: #0d1208;
+  padding: 1rem 1.2rem;
+  gap: 0.8rem;
+  overflow-y: auto;
+}
+.chart-container {
+  width: 100%;
+  max-width: 420px;
+}
+.chart-bar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.bar-label {
+  font-size: 0.75rem;
+  width: 60px;
+  text-align: right;
+  color: rgba(255,255,255,0.6);
+  flex-shrink: 0;
+}
+.bar-track {
+  flex: 1;
+  height: 22px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+.bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 4px;
+}
+.bar-fill .bar-num {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: rgba(0,0,0,0.7);
+}
+.bar-fill.BB-fill { background: #4a3828; }
+.bar-fill.Bb-fill { background: #5a3820; }
+.bar-fill.bb-fill { background: #c8bfb0; }
+.bar-count {
+  font-size: 0.75rem;
+  width: 24px;
+  color: rgba(255,255,255,0.5);
+}
+.chart-section-title {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 0.4rem;
+}
+.compare-cols {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+  max-width: 420px;
+}
+.compare-col { flex: 1; }
+.compare-col-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #e8c56d;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+.insight-box {
+  background: rgba(232,197,109,0.08);
+  border: 1px solid rgba(232,197,109,0.25);
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  max-width: 420px;
+  width: 100%;
+}
+.insight-box p {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.7);
+  line-height: 1.6;
+}
+.time-badge {
+  background: rgba(232,197,109,0.12);
+  border: 1px solid rgba(232,197,109,0.3);
+  border-radius: 8px;
+  padding: 0.4rem 1rem;
+  font-size: 0.8rem;
+  color: #e8c56d;
+  text-align: center;
+}
+.replay-btn {
+  background: #e8c56d;
+  color: #1a1008;
+  border: none;
+  padding: 0.7rem 2.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  border-radius: 50px;
+  cursor: pointer;
+  font-family: inherit;
+  touch-action: manipulation;
+}
+.replay-btn:active { opacity: 0.85; }
+.legend-row {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.5);
+}
+.legend-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+}
+
+/* ========== TUTORIAL SCREEN ========== */
+#tutorialScreen {
+  position: relative;
+  overflow: hidden;
+}
+.tutorial-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+.tutorial-play-panel {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  pointer-events: all;
+}
+.tutorial-guide-text {
+  background: rgba(0,0,0,0.85);
+  border: 1.5px solid rgba(232,197,109,0.5);
+  border-radius: 12px;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.9rem;
+  color: #fff;
+  text-align: center;
+  line-height: 1.5;
+  max-width: 320px;
+}
+.tutorial-guide-text strong { color: #e8c56d; }
+.play-btn {
+  background: #e8c56d;
+  color: #1a1008;
+  border: none;
+  padding: 0.85rem 3rem;
+  font-size: 1.1rem;
+  font-weight: 800;
+  border-radius: 50px;
+  cursor: pointer;
+  font-family: inherit;
+  touch-action: manipulation;
+  animation: playPulse 1.4s ease-in-out infinite;
+}
+@keyframes playPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(232,197,109,0.5); }
+  50% { box-shadow: 0 0 0 10px rgba(232,197,109,0); }
+}
+.play-btn:active { transform: scale(0.96); }
+.arrow-label {
+  position: absolute;
+  z-index: 25;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.arrow-label .lbl {
+  background: rgba(0,0,0,0.82);
+  border: 1px solid rgba(232,197,109,0.5);
+  border-radius: 8px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #e8c56d;
+  white-space: nowrap;
+}
+.arrow-label .arr {
+  font-size: 1.2rem;
+  line-height: 1;
+  color: #e8c56d;
+}
+.moth-label-BB .lbl { border-color: rgba(80,60,40,0.8); color: #c8a878; }
+.moth-label-Bb .lbl { border-color: rgba(120,80,40,0.8); color: #d4a060; }
+.moth-label-bb .lbl { border-color: rgba(200,190,170,0.8); color: #e8e0d0; }
+.moth-sprite {
+  position: absolute;
+  border-radius: 50%;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.1s;
+  border: 2px solid rgba(255,255,255,0.08);
+}
+.moth-sprite.caught {
+  animation: catchAnim 0.25s ease forwards;
+}
+@keyframes catchAnim {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.5; }
+  100% { transform: scale(0); opacity: 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- START SCREEN -->
+<div id="startScreen" class="screen active">
+  <div class="game-title">
+    <h1>🦋 후추나방<br>생존 게임</h1>
+    <p>🦉 포식자가 되어 나방을 사냥하세요 🐦</p>
+  </div>
+  <div class="env-cards">
+    <div class="env-card" id="cardForest" onclick="selectEnv('forest')">
+      <div class="env-preview forest">
+        <div class="env-tree-preview"></div>
+        <div class="env-tree-preview"></div>
+        <div class="env-tree-preview"></div>
+      </div>
+      <div class="env-label">🌳 일반 숲<br><small style="opacity:0.6;font-size:0.75rem">밝은 나무껍질</small></div>
+    </div>
+    <div class="env-card" id="cardVolcano" onclick="selectEnv('volcano')">
+      <div class="env-preview volcano">
+        <div class="env-tree-preview"></div>
+        <div class="env-tree-preview"></div>
+        <div class="env-tree-preview"></div>
+      </div>
+      <div class="env-label">🌋 화산재 숲<br><small style="opacity:0.6;font-size:0.75rem">검은 나무껍질</small></div>
+    </div>
+  </div>
+  <button class="start-btn" id="startBtn" onclick="startGame()" disabled>환경을 선택하세요</button>
+</div>
+
+<!-- TUTORIAL SCREEN -->
+<div id="tutorialScreen" class="screen">
+  <canvas id="tutorialCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
+  <div class="tutorial-overlay" id="tutorialOverlay"></div>
+  <div style="position:absolute;top:0;left:0;right:0;z-index:30;text-align:center;padding:0.7rem 1rem;background:rgba(0,0,0,0.72);border-bottom:1.5px solid rgba(232,197,109,0.35);pointer-events:none;">
+    <span style="font-size:0.85rem;font-weight:700;color:#e8c56d;letter-spacing:0.04em;">🎮 게임 플레이 안내</span>
+  </div>
+  <div class="tutorial-play-panel">
+    <div class="tutorial-guide-text">
+      <strong>고민하지 말고!</strong> 눈에 <strong>딱 띄는</strong> 나방을<br>최대한 <strong>빠르게</strong> 잡아주세요 🎯
+    </div>
+    <button class="play-btn" onclick="beginPlay()">▶ 게임 시작</button>
+  </div>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="gameScreen" class="screen">
+  <div class="game-hud">
+    <div class="hud-item">
+      <div class="hud-label">세대</div>
+      <div class="hud-value" id="hudTurn">1 / 4</div>
+    </div>
+    <div class="hud-item">
+      <div class="hud-label">남은 나방</div>
+      <div class="hud-value" id="hudMothCount">20</div>
+    </div>
+    <div class="hud-item">
+      <div class="hud-label">이번 턴 포획</div>
+      <div class="hud-value" id="hudCaught">0 / 2</div>
+    </div>
+    <div class="hud-item">
+      <div class="hud-label">경과 시간</div>
+      <div class="hud-value" id="hudTimer">0.0s</div>
+    </div>
+  </div>
+  <canvas id="gameCanvas"></canvas>
+  <div class="catch-indicator">
+    눈에 띄는 나방을 빠르게 잡으세요! 이번 턴: <span id="catchLeft">2</span>마리 남음
+  </div>
+</div>
+
+<!-- TRANSITION SCREEN -->
+<div id="transitionScreen" class="screen">
+  <div class="transition-content">
+    <div class="transition-title">다음 세대로 이동 중...</div>
+    <div class="life-cycle">
+      <div class="life-step">
+        <div class="life-icon eggs">🥚</div>
+        <div class="life-label">알 낳기</div>
+      </div>
+      <div class="life-arrow">→</div>
+      <div class="life-step">
+        <div class="life-icon death">💀</div>
+        <div class="life-label">부모 사망</div>
+      </div>
+      <div class="life-arrow">→</div>
+      <div class="life-step">
+        <div class="life-icon birth">🦋</div>
+        <div class="life-label">새 나방 탄생</div>
+      </div>
+    </div>
+    <div class="transition-sub">
+      살아남은 나방들이 자손을 남겼습니다.<br>
+      다음 세대의 나방 집단이 구성되고 있어요.
+    </div>
+    <div class="progress-dots" id="progressDots">
+      <div class="dot" id="dot0"></div>
+      <div class="dot" id="dot1"></div>
+      <div class="dot" id="dot2"></div>
+      <div class="dot" id="dot3"></div>
+    </div>
+  </div>
+</div>
+
+<!-- RESULT SCREEN 1 -->
+<div id="resultScreen1" class="screen">
+  <div class="result-title">🔍 세대별 집단 변화</div>
+  <div class="result-subtitle">각 세대의 나방 집단 구성을 비교해보세요</div>
+  <div class="generations-row" id="generationsRow"></div>
+  <div class="legend-row">
+    <div class="legend-item"><div class="legend-dot" style="background:#1a1008;border:1px solid #555"></div> BB (검정)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#5a3820"></div> Bb (갈색)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#E8E0D0;border:1px solid #aaa"></div> bb (흰색)</div>
+  </div>
+  <div class="stats-row">
+    <div class="stat-box">
+      <div class="label">클리어 시간</div>
+      <div class="value" id="finalTime">-</div>
+    </div>
+    <div class="stat-box">
+      <div class="label">환경</div>
+      <div class="value" id="finalEnv">-</div>
+    </div>
+  </div>
+  <div class="capture-notice">
+    📸 지금 이 화면을 캡처하여 공유 슬라이드에 올려주세요!
+  </div>
+  <button class="next-btn" onclick="showResult2()">막대그래프 보기 →</button>
+</div>
+
+<!-- RESULT SCREEN 2 -->
+<div id="resultScreen2" class="screen">
+  <div class="result-title">📊 형질 빈도 변화</div>
+  <div class="compare-cols" id="compareCols"></div>
+  <div class="legend-row">
+    <div class="legend-item"><div class="legend-dot" style="background:#4a3828;border:1px solid #555"></div> BB (검정)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#5a3820"></div> Bb (갈색)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#c8bfb0;border:1px solid #aaa"></div> bb (흰색)</div>
+  </div>
+  <div class="insight-box" id="insightBox"></div>
+  <div class="time-badge" id="timeBadge"></div>
+  <div class="result-subtitle" style="font-size:0.75rem">
+    📸 이 화면도 캡처하여 공유 슬라이드에 올려주세요
+  </div>
+  <button class="replay-btn" onclick="resetGame()">다시 하기</button>
+</div>
+
+<script>
+const TOTAL_MOTHS = 20;
+const TURNS = 4;
+const CATCH_PER_TURN = 2;
+const AMPLIFY = 0.12;
+
+let env = null;
+let currentTurn = 0;
+let caughtThisTurn = 0;
+let moths = [];
+let generationHistory = [];
+let startTime = 0;
+let elapsed = 0;
+let timerInterval = null;
+let canvas, ctx;
+let canvasW, canvasH;
+let trees = [];
+
+const GENOTYPES = ['BB','Bb','bb'];
+const MOTH_COLORS = { BB:'#1a1008', Bb:'#3d2510', bb:'#E8E0D0' };
+const MOTH_WING = { BB:'#2a2018', Bb:'#5a3820', bb:'#f0e8d8' };
+
+function selectEnv(e) {
+  env = e;
+  document.getElementById('cardForest').classList.toggle('selected', e==='forest');
+  document.getElementById('cardVolcano').classList.toggle('selected', e==='volcano');
+  const btn = document.getElementById('startBtn');
+  btn.disabled = false;
+  btn.textContent = e==='forest' ? '🌳 일반 숲에서 시작' : '🌋 화산재 숲에서 시작';
+}
+
+function startGame() {
+  if(!env) return;
+  currentTurn = 0;
+  caughtThisTurn = 0;
+  generationHistory = [];
+  elapsed = 0;
+  moths = createInitialMoths();
+  generationHistory.push(snapshotMoths());
+  showScreen('tutorialScreen');
+  initTutorial();
+}
+
+function initTutorial() {
+  const tc = document.getElementById('tutorialCanvas');
+  tc.width = window.innerWidth;
+  tc.height = window.innerHeight;
+  const tctx = tc.getContext('2d');
+
+  canvas = document.getElementById('gameCanvas');
+  canvasW = tc.width;
+  canvasH = tc.height;
+  ctx = tctx;
+  generateTrees();
+  placeMothsOnTrees();
+  drawScene();
+  ctx = null;
+
+  drawTutorialArrows(tc, tctx);
+}
+
+function drawTutorialArrows(tc, tctx) {
+  const overlay = document.getElementById('tutorialOverlay');
+  overlay.innerHTML = '';
+
+  const treeArrow = document.createElement('div');
+  treeArrow.className = 'arrow-label';
+  const treeX = Math.round(canvasW * 0.28);
+  const treeY = Math.round(canvasH * 0.18);
+  treeArrow.style.cssText = `left:${treeX}px;top:${treeY}px;transform:translateX(-50%);`;
+  treeArrow.innerHTML = `<div class="lbl">🌲 나무 (배경)</div><div class="arr">↓</div>`;
+  overlay.appendChild(treeArrow);
+
+  const mothsByType = { BB:null, Bb:null, bb:null };
+  moths.forEach(m => { if(!mothsByType[m.genotype]) mothsByType[m.genotype]=m; });
+
+  const labels = [
+    { g:'BB', text:'BB 나방 (검정)', cls:'moth-label-BB' },
+    { g:'Bb', text:'Bb 나방 (갈색)', cls:'moth-label-Bb' },
+    { g:'bb', text:'bb 나방 (흰색)', cls:'moth-label-bb' },
+  ];
+  labels.forEach(({ g, text, cls }) => {
+    const m = mothsByType[g];
+    if(!m) return;
+    const el = document.createElement('div');
+    el.className = `arrow-label ${cls}`;
+    const px = Math.round(m.x);
+    const py = Math.round(m.y - m.r - 44);
+    el.style.cssText = `left:${px}px;top:${Math.max(10,py)}px;transform:translateX(-50%);`;
+    el.innerHTML = `<div class="lbl">${text}</div><div class="arr">↓</div>`;
+    overlay.appendChild(el);
+  });
+}
+
+function beginPlay() {
+  const gc = document.getElementById('gameCanvas');
+  canvasW = gc.width = window.innerWidth;
+  canvasH = gc.height = window.innerHeight;
+  ctx = gc.getContext('2d');
+  generateTrees();
+  placeMothsOnTrees();
+  document.getElementById('hudTurn').textContent = `1 / ${TURNS}`;
+  document.getElementById('hudCaught').textContent = `0 / ${CATCH_PER_TURN}`;
+  document.getElementById('catchLeft').textContent = CATCH_PER_TURN;
+  document.getElementById('hudMothCount').textContent = TOTAL_MOTHS;
+  showScreen('gameScreen');
+  drawScene();
+  startTimer();
+}
+
+function createInitialMoths() {
+  const counts = { bb:8, Bb:7, BB:5 };
+  const list = [];
+  for(const [g, n] of Object.entries(counts)) {
+    for(let i=0;i<n;i++) list.push({ genotype: g, caught: false });
+  }
+  shuffle(list);
+  return list;
+}
+
+function shuffle(arr) {
+  for(let i=arr.length-1;i>0;i--) {
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+}
+
+function snapshotMoths() {
+  return moths.map(m=>m.genotype);
+}
+
+function initCanvas() {
+  canvas = document.getElementById('gameCanvas');
+  canvasW = canvas.width = window.innerWidth;
+  canvasH = canvas.height = window.innerHeight;
+  ctx = canvas.getContext('2d');
+  generateTrees();
+  placeMothsOnTrees();
+}
+
+function generateTrees() {
+  trees = [];
+  const positions = [0.1, 0.28, 0.5, 0.72, 0.9];
+  const isVolcano = env === 'volcano';
+  positions.forEach((xRatio, i) => {
+    const x = canvasW * xRatio;
+    const h = canvasH * (0.55 + Math.random()*0.15);
+    const w = canvasW * (0.06 + Math.random()*0.03);
+    trees.push({
+      x, y: canvasH * 0.15,
+      w, h,
+      color: isVolcano ? `hsl(${10+i*3},${8+i*2}%,${8+i*3}%)` : `hsl(${30+i*5},${35+i*3}%,${28+i*4}%)`
+    });
+  });
+}
+
+function placeMothsOnTrees() {
+  moths.forEach((m, idx) => {
+    const tree = trees[idx % trees.length];
+    const px = tree.x + (Math.random()-0.5)*tree.w*3;
+    const py = tree.y + Math.random()*tree.h*0.9;
+    m.x = Math.max(20, Math.min(canvasW-20, px));
+    m.y = Math.max(60, Math.min(canvasH-60, py));
+    m.r = 14 + Math.random()*4;
+  });
+}
+
+function drawScene() {
+  if(!ctx) return;
+  ctx.clearRect(0,0,canvasW,canvasH);
+  const isVolcano = env==='volcano';
+  const sky = isVolcano
+    ? ctx.createLinearGradient(0,0,0,canvasH)
+    : ctx.createLinearGradient(0,0,0,canvasH);
+  if(isVolcano) {
+    sky.addColorStop(0,'#1a1210');
+    sky.addColorStop(0.5,'#2a2420');
+    sky.addColorStop(1,'#1a1008');
+  } else {
+    sky.addColorStop(0,'#a8c890');
+    sky.addColorStop(0.4,'#c8d8a8');
+    sky.addColorStop(1,'#b8a878');
+  }
+  ctx.fillStyle = sky;
+  ctx.fillRect(0,0,canvasW,canvasH);
+
+  trees.forEach(t => {
+    ctx.fillStyle = t.color;
+    ctx.beginPath();
+    ctx.roundRect(t.x - t.w/2, t.y, t.w, t.h, 4);
+    ctx.fill();
+
+    const isVolcano = env === 'volcano';
+    const grainColor = isVolcano ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.08)';
+    const highlightColor = isVolcano ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.12)';
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(t.x - t.w/2, t.y, t.w, t.h, 4);
+    ctx.clip();
+
+    const grainCount = 6;
+    for(let i=0; i<grainCount; i++) {
+      const lx = t.x - t.w/2 + (t.w / (grainCount+1)) * (i+1);
+      const curve = (Math.random()-0.5) * t.w * 0.3;
+      ctx.strokeStyle = grainColor;
+      ctx.lineWidth = 1 + Math.random()*1.5;
+      ctx.beginPath();
+      ctx.moveTo(lx, t.y);
+      ctx.bezierCurveTo(
+        lx + curve, t.y + t.h*0.33,
+        lx - curve, t.y + t.h*0.66,
+        lx + curve*0.5, t.y + t.h
+      );
+      ctx.stroke();
+    }
+
+    const knotCount = 2 + Math.floor(Math.random()*2);
+    for(let k=0; k<knotCount; k++) {
+      const kx = t.x + (Math.random()-0.5)*t.w*0.5;
+      const ky = t.y + t.h*0.2 + Math.random()*t.h*0.6;
+      const kr = t.w * (0.08 + Math.random()*0.1);
+      ctx.strokeStyle = grainColor;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(kx, ky, kr, kr*0.4, 0, 0, Math.PI*2);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = highlightColor;
+    ctx.fillRect(t.x - t.w/2, t.y, t.w*0.18, t.h);
+
+    ctx.restore();
+  });
+
+  moths.filter(m=>!m.caught).forEach(m => drawMoth(m));
+}
+
+function drawMoth(m) {
+  const g = m.genotype;
+  const body = MOTH_COLORS[g];
+  const wing = MOTH_WING[g];
+  const r = m.r;
+
+  ctx.save();
+  ctx.translate(m.x, m.y);
+
+  ctx.fillStyle = wing;
+  ctx.globalAlpha = 0.88;
+  ctx.beginPath();
+  ctx.ellipse(-r*0.9, 0, r*1.1, r*0.55, -0.3, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(r*0.9, 0, r*1.1, r*0.55, 0.3, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.ellipse(-r*0.7, r*0.3, r*0.65, r*0.35, 0.2, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(r*0.7, r*0.3, r*0.65, r*0.35, -0.2, 0, Math.PI*2);
+  ctx.fill();
+
+  if(g==='bb') {
+    ctx.fillStyle = 'rgba(30,20,10,0.3)';
+    for(let i=0;i<5;i++) {
+      const sx = (Math.random()-0.5)*r*1.5;
+      const sy = (Math.random()-0.5)*r*0.8;
+      ctx.beginPath();
+      ctx.arc(sx, sy, r*0.08, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  ctx.fillStyle = body;
+  ctx.globalAlpha = 1;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r*0.22, r*0.65, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.ellipse(-r*0.9, 0, r*1.1, r*0.55, -0.3, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(r*0.9, 0, r*1.1, r*0.55, 0.3, 0, Math.PI*2);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function startTimer() {
+  startTime = Date.now();
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    elapsed = (Date.now() - startTime) / 1000;
+    document.getElementById('hudTimer').textContent = elapsed.toFixed(1)+'s';
+  }, 100);
+}
+
+canvas_click_handler = function(e) {
+  if(caughtThisTurn >= CATCH_PER_TURN) return;
+  const rect = canvas.getBoundingClientRect();
+  const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+  const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+
+  let hit = null;
+  let minDist = Infinity;
+  moths.filter(m=>!m.caught).forEach(m => {
+    const dx = m.x - cx, dy = m.y - cy;
+    const dist = Math.sqrt(dx*dx+dy*dy);
+    if(dist < m.r*2.2 && dist < minDist) { minDist=dist; hit=m; }
+  });
+  if(!hit) return;
+
+  hit.caught = true;
+  caughtThisTurn++;
+
+  showCatchEffect(hit.x, hit.y, MOTH_COLORS[hit.genotype]);
+
+  document.getElementById('hudCaught').textContent = `${caughtThisTurn} / ${CATCH_PER_TURN}`;
+  document.getElementById('catchLeft').textContent = CATCH_PER_TURN - caughtThisTurn;
+  document.getElementById('hudMothCount').textContent = moths.filter(m=>!m.caught).length;
+
+  drawScene();
+
+  if(caughtThisTurn >= CATCH_PER_TURN) {
+    setTimeout(() => nextTurn(), 400);
+  }
+};
+
+function showCatchEffect(x, y, color) {
+  const div = document.createElement('div');
+  div.style.cssText = `position:fixed;left:${x}px;top:${y}px;width:40px;height:40px;
+    border-radius:50%;background:${color};opacity:0.7;transform:translate(-50%,-50%) scale(1);
+    pointer-events:none;transition:all 0.3s;z-index:100;`;
+  document.body.appendChild(div);
+  requestAnimationFrame(()=>{
+    div.style.transform='translate(-50%,-50%) scale(2.5)';
+    div.style.opacity='0';
+  });
+  setTimeout(()=>div.remove(), 350);
+}
+
+function nextTurn() {
+  clearInterval(timerInterval);
+  const survived = moths.filter(m=>!m.caught);
+  moths = reproduce(survived);
+  generationHistory.push(snapshotMoths());
+  currentTurn++;
+
+  if(currentTurn >= TURNS) {
+    showTransition(true);
+  } else {
+    showTransition(false);
+  }
+}
+
+function reproduce(survivors) {
+  const survivedCounts = { BB:0, Bb:0, bb:0 };
+  survivors.forEach(m => survivedCounts[m.genotype]++);
+  const total = survivors.length;
+  if(total === 0) return createInitialMoths();
+
+  const newCounts = { BB:0, Bb:0, bb:0 };
+
+  GENOTYPES.forEach(g => {
+    newCounts[g] = Math.floor(survivedCounts[g] / total * TOTAL_MOTHS);
+  });
+
+  let assigned = GENOTYPES.reduce((s,g) => s+newCounts[g], 0);
+  let remaining = TOTAL_MOTHS - assigned;
+
+  const fractions = GENOTYPES.map(g => ({
+    g,
+    frac: (survivedCounts[g] / total * TOTAL_MOTHS) - newCounts[g]
+  })).sort((a,b) => b.frac - a.frac);
+
+  for(let i=0; i<remaining; i++) {
+    newCounts[fractions[i % fractions.length].g]++;
+  }
+
+  const newMoths = [];
+  GENOTYPES.forEach(g => {
+    for(let i=0; i<newCounts[g]; i++) newMoths.push({ genotype:g, caught:false });
+  });
+  shuffle(newMoths);
+  return newMoths;
+}
+
+function showTransition(isFinal) {
+  showScreen('transitionScreen');
+  document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active',i<currentTurn));
+  setTimeout(() => {
+    if(isFinal) {
+      showResultScreen1();
+    } else {
+      caughtThisTurn = 0;
+      placeMothsOnTrees();
+      document.getElementById('hudTurn').textContent = `${currentTurn+1} / ${TURNS}`;
+      document.getElementById('hudCaught').textContent = `0 / ${CATCH_PER_TURN}`;
+      document.getElementById('catchLeft').textContent = CATCH_PER_TURN;
+      document.getElementById('hudMothCount').textContent = TOTAL_MOTHS;
+      showScreen('gameScreen');
+      drawScene();
+      startTimer();
+    }
+  }, 2000);
+}
+
+function showResultScreen1() {
+  const totalTime = elapsed.toFixed(1) + 's';
+  document.getElementById('finalTime').textContent = totalTime;
+  document.getElementById('finalEnv').textContent = env==='forest'?'🌳 일반 숲':'🌋 화산재 숲';
+
+  const row = document.getElementById('generationsRow');
+  row.innerHTML = '';
+  generationHistory.forEach((gen, gi) => {
+    const block = document.createElement('div');
+    block.className = 'gen-block';
+    const label = document.createElement('div');
+    label.className = 'gen-label';
+    label.textContent = gi===0 ? '초기 집단' : `${gi}세대 후`;
+    const grid = document.createElement('div');
+    grid.className = 'gen-grid';
+    const sorted = [...gen].sort((a,b)=>GENOTYPES.indexOf(a)-GENOTYPES.indexOf(b));
+    sorted.forEach(g => {
+      const cell = document.createElement('div');
+      cell.className = `moth-cell ${g}`;
+      grid.appendChild(cell);
+    });
+    const counts = countGenotypes(gen);
+    const countLabel = document.createElement('div');
+    countLabel.className = 'gen-label';
+    countLabel.style.fontSize='0.6rem';
+    countLabel.innerHTML = `<span style="color:#4a3828">■</span>${counts.BB} <span style="color:#8B7355">■</span>${counts.Bb} <span style="color:#c8bfb0">■</span>${counts.bb}`;
+    block.appendChild(label);
+    block.appendChild(grid);
+    block.appendChild(countLabel);
+    row.appendChild(block);
+  });
+  showScreen('resultScreen1');
+}
+
+function showResult2() {
+  const cols = document.getElementById('compareCols');
+  cols.innerHTML = '';
+  const initial = generationHistory[0];
+  const final = generationHistory[generationHistory.length-1];
+  const initCounts = countGenotypes(initial);
+  const finalCounts = countGenotypes(final);
+
+  [
+    { title: '초기 집단', counts: initCounts, data: initial },
+    { title: `${TURNS}세대 후`, counts: finalCounts, data: final }
+  ].forEach(({ title, counts }) => {
+    const col = document.createElement('div');
+    col.className = 'compare-col';
+    const colTitle = document.createElement('div');
+    colTitle.className = 'compare-col-title';
+    colTitle.textContent = title;
+    col.appendChild(colTitle);
+    const group = document.createElement('div');
+    group.className = 'chart-bar-group';
+    GENOTYPES.forEach(g => {
+      const n = counts[g];
+      const pct = Math.round(n/TOTAL_MOTHS*100);
+      const row = document.createElement('div');
+      row.className = 'bar-row';
+      row.innerHTML = `
+        <div class="bar-label">${g}</div>
+        <div class="bar-track">
+          <div class="bar-fill ${g}-fill" style="width:0%" data-pct="${pct}">
+            <span class="bar-num">${n}</span>
+          </div>
+        </div>
+        <div class="bar-count">${pct}%</div>
+      `;
+      group.appendChild(row);
+    });
+    col.appendChild(group);
+    cols.appendChild(col);
+  });
+
+  const insightText = env === 'volcano'
+    ? `<strong style="color:#e8c56d">🌋 화산재 숲</strong>에서는 <strong>BB (검정)</strong> 형질이 나무껍질과 비슷한 색이라 눈에 덜 띄었어요.<br>반면 <strong>bb (흰색)</strong> 형질은 검은 배경에서 뚜렷하게 드러나 집중적으로 포식되었고,<br>4세대를 거치면서 흰 나방은 크게 줄고 검은 나방이 집단의 다수를 차지하게 됐습니다.`
+    : `<strong style="color:#e8c56d">🌳 일반 숲</strong>에서는 검정·갈색·흰색 나방 중 어느 하나가 압도적으로 눈에 띄기 어려워요.<br>그럼에도 상대적으로 더 눈에 띄는 형질이 조금씩 더 많이 포식되어,<br>4세대에 걸쳐 집단 내 형질 구성이 서서히 변화했습니다. 화산재 숲과 비교해보면 어떤 차이가 있나요?`;
+  document.getElementById('insightBox').innerHTML = `<p>${insightText}</p>`;
+  document.getElementById('timeBadge').textContent = `⏱ 클리어 시간: ${elapsed.toFixed(1)}초 — 실제 자연에서 포식자는 최대한 빠르게 눈에 띄는 먹이를 사냥해요. 정말로 포식자처럼 플레이 했는지 생각해 봅시다 :)`;
+  showScreen('resultScreen2');
+
+  setTimeout(() => {
+    document.querySelectorAll('.bar-fill').forEach(el => {
+      el.style.width = el.dataset.pct + '%';
+    });
+  }, 100);
+}
+
+function countGenotypes(gen) {
+  const c = { BB:0, Bb:0, bb:0 };
+  gen.forEach(g=>c[g]++);
+  return c;
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function resetGame() {
+  env = null;
+  document.getElementById('cardForest').classList.remove('selected');
+  document.getElementById('cardVolcano').classList.remove('selected');
+  const btn = document.getElementById('startBtn');
+  btn.disabled = true;
+  btn.textContent = '환경을 선택하세요';
+  showScreen('startScreen');
+}
+
+window.addEventListener('load', () => {
+  canvas = document.getElementById('gameCanvas');
+  canvas.addEventListener('click', canvas_click_handler);
+  canvas.addEventListener('touchstart', e=>{ e.preventDefault(); canvas_click_handler(e); }, {passive:false});
+  window.addEventListener('resize', ()=>{
+    if(document.getElementById('gameScreen').classList.contains('active')) {
+      initCanvas(); drawScene();
+    }
+    if(document.getElementById('tutorialScreen').classList.contains('active')) {
+      initTutorial();
+    }
+  });
+});
+</script>
+</body>
+</html>
