@@ -657,6 +657,8 @@ body {
       <div class="dot" id="dot1"></div>
       <div class="dot" id="dot2"></div>
       <div class="dot" id="dot3"></div>
+      <div class="dot" id="dot4"></div>
+      <div class="dot" id="dot5"></div>
     </div>
   </div>
 </div>
@@ -706,7 +708,7 @@ body {
 
 <script>
 const TOTAL_MOTHS = 20;
-const TURNS = 4;
+const TURNS = 6;
 const CATCH_PER_TURN = 2;
 const AMPLIFY = 0.12;
 
@@ -815,7 +817,10 @@ function beginPlay() {
 }
 
 function createInitialMoths() {
-  const counts = { bb:8, Bb:7, BB:5 };
+  // 두 환경 모두 동일한 초기 집단: 흰색(bb) 다수
+  // — 화산 폭발 이전, 밝은 나무껍질 환경에서 형성된 집단
+  // 화산재 숲은 "그 집단이 환경 변화를 맞이한 상황"
+  const counts = { bb:12, Bb:5, BB:3 };
   const list = [];
   for(const [g, n] of Object.entries(counts)) {
     for(let i=0;i<n;i++) list.push({ genotype: g, caught: false });
@@ -1190,8 +1195,8 @@ function showResult2() {
   });
 
   const insightText = env === 'volcano'
-    ? `<strong style="color:#e8c56d">🌋 화산재 숲</strong>에서는 <strong>BB (검정)</strong> 형질이 나무껍질과 비슷한 색이라 눈에 덜 띄었어요.<br>반면 <strong>bb (흰색)</strong> 형질은 검은 배경에서 뚜렷하게 드러나 집중적으로 포식되었고,<br>4세대를 거치면서 흰 나방은 크게 줄고 검은 나방이 집단의 다수를 차지하게 됐습니다.`
-    : `<strong style="color:#e8c56d">🌳 일반 숲</strong>에서는 검정·갈색·흰색 나방 중 어느 하나가 압도적으로 눈에 띄기 어려워요.<br>그럼에도 상대적으로 더 눈에 띄는 형질이 조금씩 더 많이 포식되어,<br>4세대에 걸쳐 집단 내 형질 구성이 서서히 변화했습니다. 화산재 숲과 비교해보면 어떤 차이가 있나요?`;
+    ? `<strong style="color:#e8c56d">🌋 화산재 숲</strong>에서도 초기 집단은 일반 숲과 같았어요 — 흰색(bb) 나방이 많은 집단이었죠.<br>그런데 화산 폭발로 나무껍질이 검게 변한 뒤, 어떤 나방이 주로 잡혔나요?<br>같은 집단이라도 <strong>환경이 달라지면</strong> 생존에 유리한 형질이 바뀌고, 세대를 거쳐 집단 전체가 변해가요.`
+    : `<strong style="color:#e8c56d">🌳 일반 숲</strong>에서는 초기에 흰색(bb) 나방이 많았어요. 밝은 색 나무들 사이에서 포식자의 눈에 상대적으로 잘 안 띄었기 때문이에요.<br>포식자로서 나방을 잡아보니 어땠나요? 어떤 나방을 주로 잡게 되었나요?<br>화산재 숲까지 플레이하여 비교해보면, '환경 변화'가 어떻게 진화를 일으키는 힘으로 작용하는지 보일 거예요.`;
   document.getElementById('insightBox').innerHTML = `<p>${insightText}</p>`;
   document.getElementById('timeBadge').textContent = `⏱ 클리어 시간: ${elapsed.toFixed(1)}초 — 실제 자연에서 포식자는 최대한 빠르게 눈에 띄는 먹이를 사냥해요. 정말로 포식자처럼 플레이 했는지 생각해 봅시다 :)`;
   showScreen('resultScreen2');
