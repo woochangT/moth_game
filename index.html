@@ -669,9 +669,9 @@ body {
   <div class="result-subtitle">각 세대의 나방 집단 구성을 비교해보세요</div>
   <div class="generations-row" id="generationsRow"></div>
   <div class="legend-row">
-    <div class="legend-item"><div class="legend-dot" style="background:#1a1008;border:1px solid #555"></div> BB (검정)</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#5a3820"></div> Bb (갈색)</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#E8E0D0;border:1px solid #aaa"></div> bb (흰색)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#1a1008;border:1px solid #555"></div> 검정 나방 (BB)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#5a3820"></div> 갈색 나방 (Bb)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#E8E0D0;border:1px solid #aaa"></div> 흰색 나방 (bb)</div>
   </div>
   <div class="stats-row">
     <div class="stat-box">
@@ -694,9 +694,9 @@ body {
   <div class="result-title">📊 형질 빈도 변화</div>
   <div class="compare-cols" id="compareCols"></div>
   <div class="legend-row">
-    <div class="legend-item"><div class="legend-dot" style="background:#4a3828;border:1px solid #555"></div> BB (검정)</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#5a3820"></div> Bb (갈색)</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#c8bfb0;border:1px solid #aaa"></div> bb (흰색)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#4a3828;border:1px solid #555"></div> 검정 나방 (BB)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#5a3820"></div> 갈색 나방 (Bb)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#c8bfb0;border:1px solid #aaa"></div> 흰색 나방 (bb)</div>
   </div>
   <div class="insight-box" id="insightBox"></div>
   <div class="time-badge" id="timeBadge"></div>
@@ -783,9 +783,9 @@ function drawTutorialArrows(tc, tctx) {
   moths.forEach(m => { if(!mothsByType[m.genotype]) mothsByType[m.genotype]=m; });
 
   const labels = [
-    { g:'BB', text:'BB 나방 (검정)', cls:'moth-label-BB' },
-    { g:'Bb', text:'Bb 나방 (갈색)', cls:'moth-label-Bb' },
-    { g:'bb', text:'bb 나방 (흰색)', cls:'moth-label-bb' },
+    { g:'BB', text:'검정 나방 (BB)', cls:'moth-label-BB' },
+    { g:'Bb', text:'갈색 나방 (Bb)', cls:'moth-label-Bb' },
+    { g:'bb', text:'흰색 나방 (bb)', cls:'moth-label-bb' },
   ];
   labels.forEach(({ g, text, cls }) => {
     const m = mothsByType[g];
@@ -1074,22 +1074,39 @@ function reproduce(survivors) {
   const total = survivors.length;
   if(total === 0) return createInitialMoths();
 
-  const newCounts = { BB:0, Bb:0, bb:0 };
+  // 하디-바인베르크 모델: 살아남은 개체의 대립유전자 빈도로 다음 세대 구성
+  // BB는 B 대립유전자 2개, Bb는 1개, bb는 0개
+  const totalAlleles = total * 2;
+  const B_count = survivedCounts.BB * 2 + survivedCounts.Bb;
+  const p = B_count / totalAlleles; // B 대립유전자 빈도
+  const q = 1 - p;                  // b 대립유전자 빈도
 
+  // p²:BB, 2pq:Bb, q²:bb 비율로 다음 세대 생성
+  const targetRatio = { BB: p*p, Bb: 2*p*q, bb: q*q };
+
+  const newCounts = { BB:0, Bb:0, bb:0 };
   GENOTYPES.forEach(g => {
-    newCounts[g] = Math.floor(survivedCounts[g] / total * TOTAL_MOTHS);
+    const exact = targetRatio[g] * TOTAL_MOTHS;
+    const base = Math.floor(exact);
+    const frac = exact - base;
+    newCounts[g] = base + (Math.random() < frac ? 1 : 0);
   });
 
+  // 합이 20이 안 맞을 경우 보정
   let assigned = GENOTYPES.reduce((s,g) => s+newCounts[g], 0);
-  let remaining = TOTAL_MOTHS - assigned;
-
-  const fractions = GENOTYPES.map(g => ({
-    g,
-    frac: (survivedCounts[g] / total * TOTAL_MOTHS) - newCounts[g]
-  })).sort((a,b) => b.frac - a.frac);
-
-  for(let i=0; i<remaining; i++) {
-    newCounts[fractions[i % fractions.length].g]++;
+  while(assigned < TOTAL_MOTHS) {
+    const g = GENOTYPES.reduce((a,b) =>
+      (newCounts[a]/TOTAL_MOTHS - targetRatio[a]) <
+      (newCounts[b]/TOTAL_MOTHS - targetRatio[b]) ? a : b
+    );
+    newCounts[g]++; assigned++;
+  }
+  while(assigned > TOTAL_MOTHS) {
+    const g = GENOTYPES.filter(g=>newCounts[g]>0).reduce((a,b) =>
+      (newCounts[a]/TOTAL_MOTHS - targetRatio[a]) >
+      (newCounts[b]/TOTAL_MOTHS - targetRatio[b]) ? a : b
+    );
+    newCounts[g]--; assigned--;
   }
 
   const newMoths = [];
@@ -1195,8 +1212,8 @@ function showResult2() {
   });
 
   const insightText = env === 'volcano'
-    ? `<strong style="color:#e8c56d">🌋 화산재 숲</strong>에서도 초기 집단은 일반 숲과 같았어요 — 흰색(bb) 나방이 많은 집단이었죠.<br>그런데 화산 폭발로 나무껍질이 검게 변한 뒤, 어떤 나방이 주로 잡혔나요?<br>같은 집단이라도 <strong>환경이 달라지면</strong> 생존에 유리한 형질이 바뀌고, 세대를 거쳐 집단 전체가 변해가요.`
-    : `<strong style="color:#e8c56d">🌳 일반 숲</strong>에서는 초기에 흰색(bb) 나방이 많았어요. 밝은 색 나무들 사이에서 포식자의 눈에 상대적으로 잘 안 띄었기 때문이에요.<br>포식자로서 나방을 잡아보니 어땠나요? 어떤 나방을 주로 잡게 되었나요?<br>화산재 숲까지 플레이하여 비교해보면, '환경 변화'가 어떻게 진화를 일으키는 힘으로 작용하는지 보일 거예요.`;
+    ? `<strong style="color:#e8c56d">🌋 화산재 숲</strong>에서도 초기 집단은 일반 숲과 같았어요 — 흰색 나방(bb)이 많은 집단이었죠.<br>그런데 화산 폭발로 나무껍질이 검게 변한 뒤, 어떤 나방이 주로 잡혔나요?<br>같은 집단이라도 <strong>환경이 달라지면</strong> 생존에 유리한 형질이 바뀌고, 세대를 거쳐 집단 전체가 변해가요.`
+    : `<strong style="color:#e8c56d">🌳 일반 숲</strong>에서는 초기에 흰색 나방(bb)이 많았어요. 밝은 색 나무들 사이에서 포식자의 눈에 상대적으로 잘 안 띄었기 때문이에요.<br>포식자로서 나방을 잡아보니 어땠나요? 어떤 나방을 주로 잡게 되었나요?<br>화산재 숲까지 플레이하여 비교해보면, '환경 변화'가 어떻게 진화를 일으키는 힘으로 작용하는지 보일 거예요.`;
   document.getElementById('insightBox').innerHTML = `<p>${insightText}</p>`;
   document.getElementById('timeBadge').textContent = `⏱ 클리어 시간: ${elapsed.toFixed(1)}초 — 실제 자연에서 포식자는 최대한 빠르게 눈에 띄는 먹이를 사냥해요. 정말로 포식자처럼 플레이 했는지 생각해 봅시다 :)`;
   showScreen('resultScreen2');
